@@ -48,10 +48,157 @@ out.balance.test %>%
 # The following code chunks run the missing balance tests. We cleaned them up, but they do not
 # appear in the paper.
 
-missing.balance.test.1 <- xBalance(fmla = missing ~ liberal + republican + obama.disapprove + ride.everyday + voted.2010 + romney.voter + Hispanics + age + residency.new + hispanic.new +  gender + college + us.born + income.new + male, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
+# missing.balance.test.1 <- xBalance(fmla = missing ~ liberal + republican + obama.disapprove + ride.everyday + voted.2010 + romney.voter + Hispanics + age + residency.new + hispanic.new +  gender + college + us.born + income.new + male, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
 #kableExtra::kable(missing.balance.test.1, caption = "Missing Balance Test #1")
-missing.balance.test.2 <- xBalance(fmla = missing ~ numberim + Remain + Englishlan + liberal + republican + obama.disapprove + ride.everyday + voted.2010 + romney.voter + Hispanics + age + residency.new + hispanic.new + gender + college + us.born + income.new + male, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
+# missing.balance.test.2 <- xBalance(fmla = missing ~ numberim + Remain + Englishlan + liberal + republican + obama.disapprove + ride.everyday + voted.2010 + romney.voter + Hispanics + age + residency.new + hispanic.new + gender + college + us.born + income.new + male, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
 #kableExtra::kable(missing.balance.test.2, caption = "Missing Balance Test #2")
-missing.balance.test.3 <- xBalance(fmla = missing ~ treatment, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
+# missing.balance.test.3 <- xBalance(fmla = missing ~ treatment, data = dat.t1, report = c("std.diffs","z.scores","adj.means","chisquare.test"),na.rm=T)
 #kableExtra::kable(missing.balance.test.3, caption = "Missing Balance Test #3")
+```
+
+```{r main results, echo=FALSE}
+
+# This code chunk is here to create Table 1. The first 
+# thing Enos does is create the vectors for each question
+# that was asked. He also assigns x.names, y.names, and 
+# covariates, but I am not sure what their purposes are.
+
+repeats <- c("numberim","Remain","Englishlan")
+x.names <- paste(repeats,".x",sep="")
+y.names <- paste(repeats,".y",sep="")
+covariates <- c('line.x')
+
+# Enos makes the matrix that will include the final results.
+
+final.mat <- matrix(nrow = 0, ncol = 8)
+
+# These vectors will subset the data by waiting preference.
+
+subsets <- c('all','no.car')
+
+# The for loop here is taking the subsets created above
+# (all and no.car) and creating the conditions to make
+# Table 1.
+
+for(subset in subsets){
+
+	out.mat = matrix(nrow = length(repeats), ncol = 8)
+	
+# Looking at all respondents.
+	
+	if(subset == 'all'){
+		dat.subset = dat.all
+	}
+	
+# Essentially filtering out respondents who wait in their
+# cars (we want people waiting on a platform to hear the
+# confederates speak Spanish).
+	
+	if(subset ==  'no.car'){
+		dat.subset = dat.all[dat.all$habits != 1,]
+		}
+
+# I am not sure what a z-variable is here.
+	
+	z.variable = 'treatment'
+
+# Another for loop within this for loop. This one looks at
+# repeats, which was created above, and subsets the data
+# accordingly. This is to distinguish by question. Then
+# the loop presumably looks at the Average Treatment
+# Effects, along with the Conditional Average Treatment
+# Effects of each question.
+	
+	for(j in 1:length(repeats)){
+		dat.subset$x.new = (as.numeric(dat.subset[,x.names[j]])-1)/4  
+
+# The -1 and /4 rescale x to 0-1. The same is done for y.
+		
+		dat.subset$y.new = (as.numeric(dat.subset[,y.names[j]])-1)/4
+		dat.subset$Y = dat.subset$y.new - dat.subset$x.new
+		
+		dat.use = dat.subset[is.na(dat.subset$Y) == F,]
+		
+		x.sd = sd(dat.use$x.new,na.rm = T)
+		x.mean = mean(dat.use$x.new,na.rm = T)
+		y.mean = mean(dat.use$y.new,na.rm = T)
+		y.treat = mean(dat.use$y.new[dat.use$treatment==1],na.rm = T)
+
+# Enos then creates the tables that will be used to help
+# create Table 1.
+		
+		station.treatment.table = table(dat.use$station,dat.use[,z.variable])
+		no.control.stations = names(which(station.treatment.table[,1] == 0))
+		no.treatment.stations = names(which(station.treatment.table[,2] == 0))
+		dat.use = dat.use[!dat.use$station%in%c(no.control.stations,no.treatment.stations),]
+				
+		
+		dat.use$station = factor(dat.use$station)
+		dat.use$treated_unit = factor(dat.use$treated_unit)
+		Xs = data.matrix(dat.use[,covariates])
+		
+		perms <- genperms(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
+		probs = genprobexact(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
+
+# This part of the code is calculating the treatment
+# effects. Really lost here. Is this controlling for the 
+# lines of the commuters?
+		
+		ate = estate(Y = dat.use$Y, Z = dat.use[,z.variable], X = Xs, prob = probs)
+		Ys = genouts(Y = dat.use$Y, Z = dat.use[,z.variable], ate = 0)
+		distout <- gendist(Ys,perms, prob=probs)
+		disp =	dispdist(distout, ate = ate, display.plot = F)
+		
+		out.mat[j,1] = repeats[j]
+		out.mat[j,2] = subset
+		out.mat[j,3] = nrow(dat.use)
+		out.mat[j,4] = ate
+		out.mat[j,5] = disp$greater.p.value
+		out.mat[j,6] = disp$lesser.p.value
+		out.mat[j,7] = x.sd
+		out.mat[j,8] = x.mean
+	}
+	
+# Enos just binds together the two matrices.
+	
+	final.mat = rbind(final.mat,out.mat)
+}
+
+# And makes them into a data frame, to which he adds
+# column names.
+
+final.mat <- as.data.frame(final.mat)
+colnames(final.mat) <- c('variable','subset','N','ate','greater.p.value','lesser.p.value','x.sd','x.mean')
+
+# He reassigns this data frame for later use.
+
+final.mat.main <- final.mat
+
+# If we use kable here, we can get a rough indication
+# of how to create Table 1. It's nowhere near perfect
+# (especially since it hasn't figured out the subset),
+# but the values are what we would expect.
+
+kable(final.mat.main)
+
+# I tried making my own tables here, but it didn't end up working on my end. Leaving this here
+# to show effort.
+
+# table1part1 <- final.mat.main %>% 
+#   filter(subset=="no.car")
+# colnames(table1part1) <- paste(colnames(table1part1), "nocar", sep = "_")
+# table1part2 <- final.mat.main %>% 
+#   filter(subset=="all")
+# colnames(table1part2) <- paste(colnames(table1part2), "all", sep = "_")
+# 
+# 
+# newtable1 <- cbind(table1part1, table1part2)
+# 
+# newtable1 <- newtable1 %>% 
+#   select(-c(subset_nocar, variable_all, subset_all)) %>% 
+#   mutate(N = N_nocar + N_all) %>% 
+#   select(-c(N_nocar, N_all))
+# 
+# kable(newtable1)
+
 ```
