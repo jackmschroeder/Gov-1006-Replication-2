@@ -120,19 +120,19 @@ final.mat.main <- final.mat
 ##subset_inference.r
 	
 
-repeats = c("numberim","Remain","Englishlan")
+repeats <- c("numberim","Remain","Englishlan")
 
-x.names = paste(repeats,".x",sep="")
-y.names = paste(repeats,".y",sep="")
+x.names <- paste(repeats,".x",sep="")
+y.names <- paste(repeats,".y",sep="")
 
-covariates = c('line.x')
+covariates <- c('line.x')
 
 var.names = c('Number of immigrants be increased?','Children of undocumented be allowed to stay?','English as official language?')
 
 	
 ##dose response estimates comparison
-final.mat = matrix(nrow = 0, ncol = 8)
-subsets = c('ta','tb')
+final.mat <- matrix(nrow = 0, ncol = 8)
+subsets <- c('ta','tb')
 cat('beginning dose response inference \n')
 
 for(subset in subsets){
