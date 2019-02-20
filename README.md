@@ -1,7 +1,7 @@
 # Gov-1006-Replication-2
 
 This is Jack Schroeder's replication of "Causal effect of intergroup contact on exclusionary
-attitudes" by Prof. Ryan Enos (2014).
+attitudes" by Prof. Ryan Enos (2014). It was done for Gov 1006: Models.
 
 There are two rmd files in the repo.
 The first, "Replication-2-Week-1.Rmd", is the work for the first week of replicating.
