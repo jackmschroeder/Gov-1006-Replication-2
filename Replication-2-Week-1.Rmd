@@ -112,26 +112,38 @@ for(subset in subsets){
 	for(j in 1:length(repeats)){
 		dat.subset$x.new = (as.numeric(dat.subset[,x.names[j]])-1)/4  
 
-# The -1 and /4 rescale x to 0-1. The same is done for y.
+# The -1 and /4 rescale x to 0-1. The same is done for y. Why is
+# this done? The responses to the three questions were given on
+# a five-point scale, which when one is subtracted and then 
+# the result is divided by 4, yields a scaled answer.
 		
 		dat.subset$y.new = (as.numeric(dat.subset[,y.names[j]])-1)/4
 		dat.subset$Y = dat.subset$y.new - dat.subset$x.new
 		
 		dat.use = dat.subset[is.na(dat.subset$Y) == F,]
+
+# The means and standard deviations of x.new and y.new are found
+# (disregarding NA values, of course).
 		
 		x.sd = sd(dat.use$x.new,na.rm = T)
 		x.mean = mean(dat.use$x.new,na.rm = T)
 		y.mean = mean(dat.use$y.new,na.rm = T)
+
+# Not entirely sure what this line does.
+		
 		y.treat = mean(dat.use$y.new[dat.use$treatment==1],na.rm = T)
 
 # Enos then creates the tables that will be used to help
-# create Table 1.
+# create Table 1. It is a treatment table that focuses on stations
+# since some stations were control and others were treatment.
 		
 		station.treatment.table = table(dat.use$station,dat.use[,z.variable])
 		no.control.stations = names(which(station.treatment.table[,1] == 0))
 		no.treatment.stations = names(which(station.treatment.table[,2] == 0))
 		dat.use = dat.use[!dat.use$station%in%c(no.control.stations,no.treatment.stations),]
 				
+# Assuming that making each station a factor makes the vector 
+# easier to work with.
 		
 		dat.use$station = factor(dat.use$station)
 		dat.use$treated_unit = factor(dat.use$treated_unit)
@@ -140,14 +152,19 @@ for(subset in subsets){
 		perms <- genperms(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
 		probs = genprobexact(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
 
-# This part of the code is calculating the treatment
-# effects. Really lost here. Is this controlling for the 
-# lines of the commuters?
+# Enos finds the Average Treatment Effects here. I'm not really
+# sure how this is done (what is estate?). Would love to learn
+# more about this in class.
 		
 		ate = estate(Y = dat.use$Y, Z = dat.use[,z.variable], X = Xs, prob = probs)
 		Ys = genouts(Y = dat.use$Y, Z = dat.use[,z.variable], ate = 0)
+
+# Is gendist gender? Distance?
+
 		distout <- gendist(Ys,perms, prob=probs)
 		disp =	dispdist(distout, ate = ate, display.plot = F)
+
+# Also unfamiliar with the usage of j.
 		
 		out.mat[j,1] = repeats[j]
 		out.mat[j,2] = subset
@@ -202,3 +219,15 @@ kable(final.mat.main)
 # kable(newtable1)
 
 ```
+
+```{r table 3}
+# Here is where the code that creates Table 3 should go. However,
+# I was unable to find the area of Enos' code that actually 
+# made the table. None of my partners were able to do so,
+# and nobody on the Slack seemed to know, either. Mark mentioned
+# in study hall that what was needed in this replication was the 
+# code that created each of the three tables, but since I was
+# unable to find the code for Table 3, I instead really focused 
+# on a close reading of the study. I really hope this is acceptable!
+```
+

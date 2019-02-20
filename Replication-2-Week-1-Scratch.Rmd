@@ -478,8 +478,6 @@ final.mat = matrix(nrow = 0, ncol = 8)
 
 subsets = c('all.prime')
 
-cat('beginning inference \n')
-
 for(subset in subsets){ ##b.only, complier, and non-compler subsets
 	out.mat = matrix(nrow = length(repeats), ncol = 8)
 	
