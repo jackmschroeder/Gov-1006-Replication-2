@@ -25,12 +25,12 @@ options(scipen = 999)
 
 # This code will load in the data for the paper.
 
-dat.all <- read.csv('pnas_data.csv')
-dat.t1 <- read.csv('t1_data.csv')
-dat.all.prime <- read.csv('prime_data.csv')
-conf.dat <- read.csv('confederate_face_data.csv')
-hisp.dat <- read.csv('hispanic_face_data.csv')
-white.dat <- read.csv('white_face_data.csv')
+dat.all <- read.csv('Enos Code/pnas_data.csv')
+dat.t1 <- read.csv('Enos Code/t1_data.csv')
+dat.all.prime <- read.csv('Enos Code/prime_data.csv')
+conf.dat <- read.csv('Enos Code/confederate_face_data.csv')
+hisp.dat <- read.csv('Enos Code/hispanic_face_data.csv')
+white.dat <- read.csv('Enos Code/white_face_data.csv')
 
 ```
 
