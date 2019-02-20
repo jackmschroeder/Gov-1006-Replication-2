@@ -196,7 +196,7 @@ final.mat.main <- final.mat
 # (especially since it hasn't figured out the subset),
 # but the values are what we would expect.
 
-kable(final.mat.main)
+kable(final.mat.main, caption = "Table 1. Experiment results")
 
 # I tried making my own tables here, but it didn't end up working on my end. Leaving this here
 # to show effort.
