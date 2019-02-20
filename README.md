@@ -14,3 +14,5 @@ The html in the repo is the knitted version of the first week's replication work
 
 The folder "Enos Code" includes the Dataverse files downloaded while replicating
 the paper.
+
+There is also a gitignore file and this readme.
