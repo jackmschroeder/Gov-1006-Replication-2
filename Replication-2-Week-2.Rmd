@@ -1,0 +1,241 @@
+---
+title: 'Replication #2'
+author: "Jack Schroeder"
+date: "2/18/2019"
+output:
+  pdf_document: default
+  html_document: default
+citation_package: natbib
+bibliography: bibliography.bib
+---
+
+## Abstract
+
+I replicate "Causal effect of intergroup contact on exclusionary attitudes" (@enos2014) using code/data deposited in the Harvard Dataverse (@DVN/DOP4UB_2017). There are two figures and three tables in the original article. Figure 2 and Tables 1 and 2 can be, almost, perfectly replicated. Table 3 and Figure 1 can not be replicated from the code/data on deposit at the Dataverse.  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Begin by calling for Enos' libraries.
+
+library(stargazer)
+library(tidyverse)
+library(ri)
+library(RItools)
+
+# Enos had this in to set scientific notation.
+
+options(scipen = 999)  
+
+# This code will load in the data for the paper.
+
+dat.all <- read.csv('Enos Code/pnas_data.csv')
+dat.t1 <- read.csv('Enos Code/t1_data.csv')
+dat.all.prime <- read.csv('Enos Code/prime_data.csv')
+
+```
+
+```{r, echo=FALSE}
+# I like the idea of using logistic regression to analyze Enos' results.
+# To do so, I need to add a column to dat.all that equals 1 if the 
+# respondent became more conservative and a 0 if there was no change or
+# if the respondent became more liberal. I think coding no change as a 0
+# rather than a 1 will make any statistically significant results more
+# robust and help avoid a Type I error.
+
+dat.all <- dat.all %>% 
+  mutate(Remain.b = case_when((Remain.y-Remain.x) > 0 ~ 1,
+                              TRUE ~ 0),
+         numberim.b = case_when((numberim.y - numberim.x) > 0 ~ 1,
+                                TRUE ~ 0),
+         Englishlan.b = case_when((Englishlan.y - Englishlan.x) > 0 ~ 1,
+                                  TRUE ~ 0),
+         Overall.b = case_when((Remain.y + numberim.y + Englishlan.y) - (Remain.x + numberim.x + Englishlan.x) > 0 ~ 1,
+                               TRUE ~ 0))
+```
+
+```{r main results, echo=FALSE}
+
+# This code chunk is here to create Table 1. The first 
+# thing Enos does is create the vectors for each question
+# that was asked. He also assigns x.names, y.names, and 
+# covariates, but I am not sure what their purposes are.
+
+repeats <- c("numberim","Remain","Englishlan")
+x.names <- paste(repeats,".x",sep="")
+y.names <- paste(repeats,".y",sep="")
+b.names <- paste(repeats,".b",sep="")
+covariates <- c('line.x')
+
+
+# Enos makes the matrix that will include the final results.
+
+final.mat <- matrix(nrow = 0, ncol = 10)
+
+# These vectors will subset the data by waiting preference.
+
+subsets <- c('all','no.car')
+
+# The for loop here is taking the subsets created above
+# (all and no.car) and creating the conditions to make
+# Table 1.
+
+for(subset in subsets){
+
+	out.mat = matrix(nrow = length(repeats), ncol = 10)
+	
+# Looking at all respondents.
+	
+	if(subset == 'all'){
+		dat.subset = dat.all
+	}
+	
+# Essentially filtering out respondents who wait in their
+# cars (we want people waiting on a platform to hear the
+# confederates speak Spanish).
+	
+	if(subset ==  'no.car'){
+		dat.subset = dat.all[dat.all$habits != 1,]
+		}
+
+# I am not sure what a z-variable is here.
+	
+	z.variable = 'treatment'
+
+# Another for loop within this for loop. This one looks at
+# repeats, which was created above, and subsets the data
+# accordingly. This is to distinguish by question. Then
+# the loop presumably looks at the Average Treatment
+# Effects, along with the Conditional Average Treatment
+# Effects of each question.
+	
+	for(j in 1:length(repeats)){
+		dat.subset$x.new = (as.numeric(dat.subset[,x.names[j]])-1)/4  
+
+# The -1 and /4 rescale x to 0-1. The same is done for y. Why is
+# this done? The responses to the three questions were given on
+# a five-point scale, which when one is subtracted and then 
+# the result is divided by 4, yields a scaled answer.
+		
+		dat.subset$y.new = (as.numeric(dat.subset[,y.names[j]])-1)/4
+		
+# I found it easier to just modify Enos' original for loop and add
+# the new binary into the mix.
+		
+		dat.subset$b.new = as.numeric(dat.subset[,b.names[j]])
+		dat.subset$Y = dat.subset$y.new - dat.subset$x.new
+		
+		dat.use = dat.subset[is.na(dat.subset$Y) == F,]
+
+# The means and standard deviations of x.new and y.new are found
+# (disregarding NA values, of course).
+		
+		x.sd = sd(dat.use$x.new,na.rm = T)
+		x.mean = mean(dat.use$x.new,na.rm = T)
+		y.mean = mean(dat.use$y.new,na.rm = T)
+		b.sd = sd(dat.use$b.new, na.rm=T)
+		b.mean = mean(dat.use$b.new, na.rm = T)
+
+# Not entirely sure what this line does.
+		
+		y.treat = mean(dat.use$y.new[dat.use$treatment==1],na.rm = T)
+
+# Enos then creates the tables that will be used to help
+# create Table 1. It is a treatment table that focuses on stations
+# since some stations were control and others were treatment.
+		
+		station.treatment.table = table(dat.use$station,dat.use[,z.variable])
+		no.control.stations = names(which(station.treatment.table[,1] == 0))
+		no.treatment.stations = names(which(station.treatment.table[,2] == 0))
+		dat.use = dat.use[!dat.use$station%in%c(no.control.stations,no.treatment.stations),]
+				
+# Assuming that making each station a factor makes the vector 
+# easier to work with.
+		
+		dat.use$station = factor(dat.use$station)
+		dat.use$treated_unit = factor(dat.use$treated_unit)
+		Xs = data.matrix(dat.use[,covariates])
+		
+		perms <- genperms(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
+		probs = genprobexact(Z = dat.use[,z.variable], blockvar=dat.use$station, clustvar=dat.use$treated_unit)
+
+# Enos finds the Average Treatment Effects here. I'm not really
+# sure how this is done (what is estate?). Would love to learn
+# more about this in class.
+		
+		ate = estate(Y = dat.use$Y, Z = dat.use[,z.variable], X = Xs, prob = probs)
+		Ys = genouts(Y = dat.use$Y, Z = dat.use[,z.variable], ate = 0)
+
+# Is gendist gender? Distance?
+
+		distout <- gendist(Ys,perms, prob=probs)
+		disp =	dispdist(distout, ate = ate, display.plot = F)
+
+# Also unfamiliar with the usage of j.
+		
+		out.mat[j,1] = repeats[j]
+		out.mat[j,2] = subset
+		out.mat[j,3] = nrow(dat.use)
+		out.mat[j,4] = ate
+		out.mat[j,5] = disp$greater.p.value
+		out.mat[j,6] = disp$lesser.p.value
+		out.mat[j,7] = x.sd
+		out.mat[j,8] = x.mean
+		out.mat[j,9] = b.sd
+		out.mat[j,10] = b.mean
+	}
+	
+# Enos just binds together the two matrices.
+	
+	final.mat = rbind(final.mat,out.mat)
+}
+
+# And makes them into a data frame, to which he adds
+# column names.
+
+final.mat <- as.data.frame(final.mat)
+colnames(final.mat) <- c('variable','subset','N','ate','greater.p.value','lesser.p.value','x.sd','x.mean', 'b.sd', 'b.mean')
+
+# He reassigns this data frame for later use.
+
+final.mat.main <- final.mat
+```
+
+```{r, echo=FALSE}
+# Preceptor's code from last week inspires me to change these factors into numerics.
+
+final.mat.main$ate    <- as.numeric(as.character(final.mat.main$ate)) 
+final.mat.main$N      <- as.numeric(as.character(final.mat.main$N)) 
+final.mat.main$x.mean <- as.numeric(as.character(final.mat.main$x.mean)) 
+final.mat.main$x.sd   <- as.numeric(as.character(final.mat.main$x.sd)) 
+final.mat.main$greater.p.value <- as.numeric(as.character(final.mat.main$greater.p.value)) 
+final.mat.main$b.sd <- as.numeric(as.character(final.mat.main$b.sd))
+final.mat.main$b.mean <- as.numeric(as.character(final.mat.main$b.mean))
+
+remain_1 <- glm(Remain.b ~ treatment, data = dat.all, family=binomial)
+
+remain_2 <- glm(Remain.b ~ treatment + male, data = dat.all, family=binomial)
+
+remain_3 <- glm(Remain.b ~ treatment + age, data = dat.all, family=binomial)
+
+numberim_1 <- glm(numberim.b ~ treatment, data = dat.all, family=binomial)
+
+Englishlan_1 <- glm(Englishlan.b ~ treatment + male + age, data = dat.all, family=binomial)
+
+Overall_1 <- glm(Overall.b ~ treatment, data = dat.all, family=binomial)
+
+
+```
+
+```{r, results = "asis"}
+stargazer(remain_1, remain_2, remain_3,
+          header = TRUE,
+          style = "ajps",
+          dep.var.labels = "Children of uncodumented be allowed to stay?",
+          omit.stat = c("f","ser","aic","LL"),
+          covariate.labels = c("Treatment", "Male", "Age"),
+          digits = 2)
+```
+
+
+## References
