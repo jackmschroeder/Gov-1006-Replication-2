@@ -3,7 +3,6 @@ title: 'Replication #2'
 author: "Jack Schroeder"
 date: "2/18/2019"
 output:
-  pdf_document: default
   html_document: default
 citation_package: natbib
 bibliography: bibliography.bib
@@ -11,7 +10,8 @@ bibliography: bibliography.bib
 
 ## Abstract
 
-I replicate "Causal effect of intergroup contact on exclusionary attitudes" (@enos2014) using code/data deposited in the Harvard Dataverse (@DVN/DOP4UB_2017). There are two figures and three tables in the original article. Figure 2 and Tables 1 and 2 can be, almost, perfectly replicated. Table 3 and Figure 1 can not be replicated from the code/data on deposit at the Dataverse.  
+I replicate "Causal effect of intergroup contact on exclusionary attitudes" (@enos2014) using code/data deposited in the Harvard Dataverse (@DVN/DOP4UB_2017). I replicate Tables 1 and 2 using the `gt` package. I then extend Enos' work by modeling his results using logistic regression (which required recoding poll responses). My use of `gt` prevented me from knitting as a pdf, so my submission is in html format.  
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -22,16 +22,16 @@ library(stargazer)
 library(tidyverse)
 library(ri)
 library(RItools)
+library(data.table)
+library(gt)
 
 # Enos had this in to set scientific notation.
 
 options(scipen = 999)  
 
-# This code will load in the data for the paper.
+# I load in dat.all, which is the only part of Enos' code I need.
 
 dat.all <- read.csv('Enos Code/pnas_data.csv')
-dat.t1 <- read.csv('Enos Code/t1_data.csv')
-dat.all.prime <- read.csv('Enos Code/prime_data.csv')
 
 ```
 
@@ -50,7 +50,13 @@ dat.all <- dat.all %>%
                                 TRUE ~ 0),
          Englishlan.b = case_when((Englishlan.y - Englishlan.x) > 0 ~ 1,
                                   TRUE ~ 0),
-         Overall.b = case_when((Remain.y + numberim.y + Englishlan.y) - (Remain.x + numberim.x + Englishlan.x) > 0 ~ 1,
+         
+# I also create an overall column that is coded 1 if the respondent had
+# a net conservative shift, and a 0 if otherwise.
+
+         Overall.b = case_when((Remain.y + numberim.y + Englishlan.y) - 
+                                 (Remain.x + numberim.x + Englishlan.x) > 
+                                 0 ~ 1,
                                TRUE ~ 0))
 ```
 
@@ -200,7 +206,7 @@ colnames(final.mat) <- c('variable','subset','N','ate','greater.p.value','lesser
 
 final.mat.main <- final.mat
 ```
-
+## Tables 1 and 2
 ```{r, echo=FALSE}
 # Preceptor's code from last week inspires me to change these factors into numerics.
 
@@ -212,26 +218,146 @@ final.mat.main$greater.p.value <- as.numeric(as.character(final.mat.main$greater
 final.mat.main$b.sd <- as.numeric(as.character(final.mat.main$b.sd))
 final.mat.main$b.mean <- as.numeric(as.character(final.mat.main$b.mean))
 
+# I wasn't familiar with gt at all before this, but Jack Luby's code was helpful in getting
+# me oriented. tab_header for titles, tab_source_note for notes/captions.
+
+final.mat.main %>%
+  gt() %>%
+  tab_header(title = md("Table 1. Experiment Results")) %>%
+  tab_source_note("In the first 'All respondents' column, ATE represents responses in T2-T1 for the treatment group compared with the countrol group for the entire experimental sample. Positive values mean a more politically conservative response. In the 'Waits on platform' column, CATEs are the Conditional Average Treatment Effects fro persons who said they stand on the platform, rather than wait in their cars. In the second 'All respondents' column, T1 levels and SDs for each variable for all respondents. All variables scaled 0-1.") %>%
+   tab_source_note("*P values from a one-tailed test against the Null Hypothesis of no effect are in parentheses.") %>%
+   tab_source_note("ⁱEach of the questions allowed responses on a five-point scale ranging from strongly agree to strongly disagree (exact answers were changed to be appropriate to the actual question)")
+
+```
+
+```{r balance test, echo=FALSE}
+
+# Starting with the balance check data. Run the balance checks (with cleaned-up code).
+
+out.balance.test <- xBalance(fmla = treatment ~ liberal + republican + obama.disapprove + ride.everyday + voted.2010 + romney.voter + Hispanics.x + age + residency.new + hispanic.new + college + income.new + male + white, data = dat.all, report = c("std.diffs","z.scores","adj.means"), strata = factor(dat.all$station))
+
+# I found Sean's code pretty helpful in formatting the table in gt.
+# I start by making the balance test results into a data frame (table2).
+# I then select the variables I need.
+
+table2 <- as.data.frame(out.balance.test) %>% 
+  select(results.treatment.0.strat,
+         results.treatment.1.strat,
+         results.std.diff.strat,
+         results.z.strat)
+
+# A package called data.table (called above) allows me to put the rownames
+# into their own column. I then rename each of those row names to match the
+# paper. Finally, I can rename the columns.
+
+setDT(table2, keep.rownames = TRUE)
+
+table2$rn <- c("Liberal",
+               "Republican",
+               "Obama Disapprove",
+               "Ride MBTA every day",
+               "Voted 2010",
+               "Romney Voter",
+               "Hispanic Threat",
+               "Age",
+               "Residency Year",
+               "Hispanic",
+               "College",
+               "Income",
+               "Male",
+               "White")
+
+colnames(table2) <- c("Condition", "Control", "Treatment", "Standard difference", "Z-score")
+
+# Now onto gt. fmt_number lets me choose how many decimals I want to show. tab_header
+# gives me a title, and tab_footnote lets me format footnotes. I was pretty lost on gt,
+# but using  Sean and Jack Luby's code as a reference really helped me out here.
+
+table2 %>%
+  gt() %>%
+  fmt_number(columns = c("Control",
+                         "Treatment",
+                         "Standard difference",
+                         "Z-score"),
+             decimals = 2) %>%
+  tab_header(title = "Table 2. Convariate balance across treatment conditions.") %>%
+  tab_footnote(
+    footnote = "Mean response values for pretreatment variables accounting for stratification into train stations. All variables are 0 and 1 variables, except for Hispanic threat, which is a seven-point scale indicating how threatening respondents find Hispanics, recoded 0-1; residency, which is measured in years; and income, which is annual income in dollars.",
+    locations = cells_data(columns = 1, rows = 1)) %>%
+  tab_footnote(
+    footnote = "Difference in standardized units",
+    locations = cells_column_labels(
+      columns = c("Standard difference")))
+```
+
+## Extension
+
+```{r logistic models, echo=FALSE}
+numberim_1 <- glm(numberim.b ~ treatment, data = dat.all, family=binomial)
+
+numberim_2 <- glm(numberim.b ~ treatment + male + age, data = dat.all, family=binomial)
+
+numberim_3 <- glm(numberim.b ~ treatment + age, data = dat.all, family=binomial)
+
 remain_1 <- glm(Remain.b ~ treatment, data = dat.all, family=binomial)
 
 remain_2 <- glm(Remain.b ~ treatment + male, data = dat.all, family=binomial)
 
 remain_3 <- glm(Remain.b ~ treatment + age, data = dat.all, family=binomial)
 
-numberim_1 <- glm(numberim.b ~ treatment, data = dat.all, family=binomial)
+Englishlan_1 <- glm(Englishlan.b ~ treatment, data = dat.all, family=binomial)
 
-Englishlan_1 <- glm(Englishlan.b ~ treatment + male + age, data = dat.all, family=binomial)
+Englishlan_2 <- glm(Englishlan.b ~ treatment + male + age, data = dat.all, family=binomial)
+
+Englishlan_3 <- glm(Englishlan.b ~ treatment + age, data = dat.all, family=binomial)
 
 Overall_1 <- glm(Overall.b ~ treatment, data = dat.all, family=binomial)
 
+Overall_2 <- glm(Overall.b ~ treatment + male + age, data = dat.all, family=binomial)
+
+Overall_3 <- glm(Overall.b ~ treatment + age, data = dat.all, family=binomial)
 
 ```
-
-```{r, results = "asis"}
+First are the models based on the question of increasing the number of immigrants.  
+```{r, echo=FALSE, results = "asis"}
+stargazer(numberim_1, numberim_2, numberim_3,
+          header = TRUE,
+          style = "ajps",
+          type = "html",
+          dep.var.labels = "Number of immigrants be increased?",
+          omit.stat = c("f","ser","aic","LL"),
+          covariate.labels = c("Treatment", "Male", "Age"),
+          digits = 2)
+```
+Second are the models based on the question of allowing the children of undocumented immigrants to remain in the country.  
+```{r, echo=FALSE, results = "asis"}
 stargazer(remain_1, remain_2, remain_3,
           header = TRUE,
           style = "ajps",
-          dep.var.labels = "Children of uncodumented be allowed to stay?",
+          type = "html",
+          dep.var.labels = "Children of undocumented be allowed to stay?",
+          omit.stat = c("f","ser","aic","LL"),
+          covariate.labels = c("Treatment", "Male", "Age"),
+          digits = 2)
+```
+Third are the models based on the question regarding English as an official language.  
+```{r, echo=FALSE, results = "asis"}
+stargazer(Englishlan_1, Englishlan_2, Englishlan_3,
+          header = TRUE,
+          style = "ajps",
+          type = "html",
+          dep.var.labels = "English as official language?",
+          omit.stat = c("f","ser","aic","LL"),
+          covariate.labels = c("Treatment", "Male", "Age"),
+          digits = 2)
+```
+Finally, I created models based on the overall conservative shift of the respondents. To do this, I created a new variable, `Overall.b`, that added up each respondent's scalar responses from pre-treatment and subtracted that value from the post-treatment value. This was done to judge the treatment effects on respondents who, on net, became more conservative during the period of the study.  
+```{r, echo=FALSE, results = "asis"}
+stargazer(Overall_1, Overall_2, Overall_3,
+          header = TRUE,
+          style = "ajps",
+          type = "html",
+          dep.var.labels = "Overall conservative shift of respondents",
           omit.stat = c("f","ser","aic","LL"),
           covariate.labels = c("Treatment", "Male", "Age"),
           digits = 2)
