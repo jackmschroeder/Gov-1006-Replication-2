@@ -291,77 +291,109 @@ table2 %>%
 ```
 
 ## Extension
+To extend Enos' work, I remodeled his results using logistic regression. I recoded the poll responses into a binary (1 indicating the respondent became more conservative) and ran multiple regressions per question. I finished by running regressions on the overall conservative shift of respondents. One thing of note is that the `t.time` was unclear on which treatment it corresponded to (3-day or 10-day). As a result, in Stargazer output, I kept the `t.time` labels similar to their coded value.  
+```{r logistic models, echo=FALSE, include=FALSE}
 
-```{r logistic models, echo=FALSE}
+# The following glm codes run logistic regressions for each question 
+# and then overall. I called for summaries to help myself determine 
+# what was significant, but include was set to false to prevent them
+# from appearing in the html.
+
 numberim_1 <- glm(numberim.b ~ treatment, data = dat.all, family=binomial)
+summary(numberim_1)
 
-numberim_2 <- glm(numberim.b ~ treatment + male + age, data = dat.all, family=binomial)
+numberim_2 <- glm(numberim.b ~ treatment + t.time, data = dat.all, family=binomial)
+summary(numberim_2)
 
-numberim_3 <- glm(numberim.b ~ treatment + age, data = dat.all, family=binomial)
+numberim_3 <- glm(numberim.b ~ treatment + republican, data = dat.all, family=binomial)
+summary(numberim_3)
 
 remain_1 <- glm(Remain.b ~ treatment, data = dat.all, family=binomial)
+summary(remain_1)
 
-remain_2 <- glm(Remain.b ~ treatment + male, data = dat.all, family=binomial)
+remain_2 <- glm(Remain.b ~ treatment + t.time, data = dat.all, family=binomial)
+summary(remain_2)
 
-remain_3 <- glm(Remain.b ~ treatment + age, data = dat.all, family=binomial)
+remain_3 <- glm(Remain.b ~ treatment + zip.pct.hispanic, data = dat.all, family=binomial)
+summary(remain_3)
 
 Englishlan_1 <- glm(Englishlan.b ~ treatment, data = dat.all, family=binomial)
+summary(Englishlan_1)
 
-Englishlan_2 <- glm(Englishlan.b ~ treatment + male + age, data = dat.all, family=binomial)
+Englishlan_2 <- glm(Englishlan.b ~ treatment + t.time, data = dat.all, family=binomial)
+summary(Englishlan_2)
 
-Englishlan_3 <- glm(Englishlan.b ~ treatment + age, data = dat.all, family=binomial)
+Englishlan_3 <- glm(Englishlan.b ~ treatment + college + romney.voter, data = dat.all, family=binomial)
+summary(Englishlan_3)
 
 Overall_1 <- glm(Overall.b ~ treatment, data = dat.all, family=binomial)
+summary(Overall_1)
 
-Overall_2 <- glm(Overall.b ~ treatment + male + age, data = dat.all, family=binomial)
+Overall_2 <- glm(Overall.b ~ treatment + t.time + college + zip.pct.hispanic + romney.voter, data = dat.all, family=binomial)
+summary(Overall_2)
 
-Overall_3 <- glm(Overall.b ~ treatment + age, data = dat.all, family=binomial)
-
+Overall_3 <- glm(Overall.b ~ treatment + zip.pct.hispanic + romney.voter + male, data = dat.all, family=binomial)
+summary(Overall_3)
 ```
-First are the models based on the question of increasing the number of immigrants.  
+First are the models based on the question of increasing the number of immigrants. We see a conservative shift that is most significant in model 2 (and close to significant in models 1 and 3).  
 ```{r, echo=FALSE, results = "asis"}
+
+# I call Stargazer for the models focusing on number of immigrants.
+
 stargazer(numberim_1, numberim_2, numberim_3,
           header = TRUE,
           style = "ajps",
           type = "html",
           dep.var.labels = "Number of immigrants be increased?",
           omit.stat = c("f","ser","aic","LL"),
-          covariate.labels = c("Treatment", "Male", "Age"),
+          covariate.labels = c("Treatment", "Treatment Time 2b", "Treatment Time 4a", "Treatment Time 4b", "Republican"),
           digits = 2)
 ```
-Second are the models based on the question of allowing the children of undocumented immigrants to remain in the country.  
+Second are the models based on the question of allowing the children of undocumented immigrants to remain in the country. There were no significant results here.  
 ```{r, echo=FALSE, results = "asis"}
+
+# I call Stargazer for the models focusing on undocumented children.
+
 stargazer(remain_1, remain_2, remain_3,
           header = TRUE,
           style = "ajps",
           type = "html",
           dep.var.labels = "Children of undocumented be allowed to stay?",
           omit.stat = c("f","ser","aic","LL"),
-          covariate.labels = c("Treatment", "Male", "Age"),
+          covariate.labels = c("Treatment", "Treatment Time 2b", "Treatment Time 4a", "Treatment Time 4b", "% Hispanic in Zip Code"),
           digits = 2)
 ```
-Third are the models based on the question regarding English as an official language.  
+Third are the models based on the question regarding English as an official language. This question also did not see significant results.  
 ```{r, echo=FALSE, results = "asis"}
+
+# I call Stargazer for the models focusing on English's official status.
+
 stargazer(Englishlan_1, Englishlan_2, Englishlan_3,
           header = TRUE,
           style = "ajps",
           type = "html",
           dep.var.labels = "English as official language?",
           omit.stat = c("f","ser","aic","LL"),
-          covariate.labels = c("Treatment", "Male", "Age"),
+          covariate.labels = c("Treatment", "Treatment Time 2b", "Treatment Time 4a", "Treatment Time 4b", "College", "Romney Voter"),
           digits = 2)
 ```
-Finally, I created models based on the overall conservative shift of the respondents. To do this, I created a new variable, `Overall.b`, that added up each respondent's scalar responses from pre-treatment and subtracted that value from the post-treatment value. This was done to judge the treatment effects on respondents who, on net, became more conservative during the period of the study.  
+Finally, I created models based on the overall conservative shift of the respondents. To do this, I created a new variable, `Overall.b`, that added up each respondent's scalar responses from pre-treatment and subtracted that value from the post-treatment value. This was done to judge the treatment effects on respondents who, on net, became more conservative during the period of the study. `treatment` and `romney.voter` approached significance in the models.  
 ```{r, echo=FALSE, results = "asis"}
+
+# Finally, I call Stargazer for the models focusing on overall effects.
+
 stargazer(Overall_1, Overall_2, Overall_3,
           header = TRUE,
           style = "ajps",
           type = "html",
           dep.var.labels = "Overall conservative shift of respondents",
           omit.stat = c("f","ser","aic","LL"),
-          covariate.labels = c("Treatment", "Male", "Age"),
+          covariate.labels = c("Treatment", "Treatment Time 2b", "Treatment Time 4a", "Treatment Time 4b", "College", "% Hispanic in Zip Code", "Romney Voter", "Male"),
           digits = 2)
 ```
 
+## Discussion 
+  
+As a whole, running these models using logistic regression did not match Enos' original results. This may be because I chose the wrong variables to test in my models. It could also be due to the way I recoded the poll responses. It is very possible that logistic regression may not be the best way to analyze the provided data. Either way, with the exception on the question concerning the number of immigrants, the treatment does not appear to have had a large effect on polling preferences.
 
 ## References
