@@ -12,6 +12,7 @@ bibliography: bibliography.bib
 
 I replicate "Causal effect of intergroup contact on exclusionary attitudes" (@enos2014) using code/data deposited in the Harvard Dataverse (@DVN/DOP4UB_2017). I replicate Tables 1 and 2 using the `gt` package. I then extend Enos' work by modeling his results using logistic regression (which required recoding poll responses). My use of `gt` prevented me from knitting as a pdf, so my submission is in html format.  
 
+Great abstract
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -42,6 +43,8 @@ dat.all <- read.csv('Enos Code/pnas_data.csv')
 # if the respondent became more liberal. I think coding no change as a 0
 # rather than a 1 will make any statistically significant results more
 # robust and help avoid a Type I error.
+
+# Excellent commenting, and yes, I agree with the coding scheme
 
 dat.all <- dat.all %>% 
   mutate(Remain.b = case_when((Remain.y-Remain.x) > 0 ~ 1,
@@ -168,16 +171,21 @@ for(subset in subsets){
 # Enos finds the Average Treatment Effects here. I'm not really
 # sure how this is done (what is estate?). Would love to learn
 # more about this in class.
+
+# it is really great to have comments like this, I very much appreciate their presence throughout the file
 		
 		ate = estate(Y = dat.use$Y, Z = dat.use[,z.variable], X = Xs, prob = probs)
 		Ys = genouts(Y = dat.use$Y, Z = dat.use[,z.variable], ate = 0)
 
-# Is gendist gender? Distance?
+# Is gendist gender? Distance? 
+# generate distribution
 
 		distout <- gendist(Ys,perms, prob=probs)
 		disp =	dispdist(distout, ate = ate, display.plot = F)
 
 # Also unfamiliar with the usage of j.
+# It indexes just like i, you can use any letter or word really, but i is the convention
+# then when you have nested for loops j is usually next
 		
 		out.mat[j,1] = repeats[j]
 		out.mat[j,2] = subset
@@ -227,6 +235,10 @@ final.mat.main %>%
   tab_source_note("In the first 'All respondents' column, ATE represents responses in T2-T1 for the treatment group compared with the countrol group for the entire experimental sample. Positive values mean a more politically conservative response. In the 'Waits on platform' column, CATEs are the Conditional Average Treatment Effects fro persons who said they stand on the platform, rather than wait in their cars. In the second 'All respondents' column, T1 levels and SDs for each variable for all respondents. All variables scaled 0-1.") %>%
    tab_source_note("*P values from a one-tailed test against the Null Hypothesis of no effect are in parentheses.") %>%
    tab_source_note("ⁱEach of the questions allowed responses on a five-point scale ranging from strongly agree to strongly disagree (exact answers were changed to be appropriate to the actual question)")
+   
+   # Really nice looking table. In the future I would recommend formatting the column headers in a nicer manner
+   # also rounding the numbers so they all fit. 
+   # Love the footnotes
 
 ```
 
@@ -239,6 +251,7 @@ out.balance.test <- xBalance(fmla = treatment ~ liberal + republican + obama.dis
 # I found Sean's code pretty helpful in formatting the table in gt.
 # I start by making the balance test results into a data frame (table2).
 # I then select the variables I need.
+# great
 
 table2 <- as.data.frame(out.balance.test) %>% 
   select(results.treatment.0.strat,
@@ -288,10 +301,15 @@ table2 %>%
     footnote = "Difference in standardized units",
     locations = cells_column_labels(
       columns = c("Standard difference")))
+      
+      # again, a very nice looking table, maybe better than the original
 ```
+What happened to the figure?
 
 ## Extension
 To extend Enos' work, I remodeled his results using logistic regression. I recoded the poll responses into a binary (1 indicating the respondent became more conservative) and ran multiple regressions per question. I finished by running regressions on the overall conservative shift of respondents. One thing of note is that the `t.time` was unclear on which treatment it corresponded to (3-day or 10-day). As a result, in Stargazer output, I kept the `t.time` labels similar to their coded value.  
+
+Great intro/orientation for the reader
 ```{r logistic models, echo=FALSE, include=FALSE}
 
 # The following glm codes run logistic regressions for each question 
@@ -376,6 +394,10 @@ stargazer(Englishlan_1, Englishlan_2, Englishlan_3,
           omit.stat = c("f","ser","aic","LL"),
           covariate.labels = c("Treatment", "Treatment Time 2b", "Treatment Time 4a", "Treatment Time 4b", "College", "Romney Voter"),
           digits = 2)
+	  
+	  # great use of GLM and stargazer. Tables look nice and your description makes sure the 
+	  # reader does not have to guess what is going on. 
+	  # Really nice extension!
 ```
 Finally, I created models based on the overall conservative shift of the respondents. To do this, I created a new variable, `Overall.b`, that added up each respondent's scalar responses from pre-treatment and subtracted that value from the post-treatment value. This was done to judge the treatment effects on respondents who, on net, became more conservative during the period of the study. `treatment` and `romney.voter` approached significance in the models.  
 ```{r, echo=FALSE, results = "asis"}
@@ -395,5 +417,7 @@ stargazer(Overall_1, Overall_2, Overall_3,
 ## Discussion 
   
 As a whole, running these models using logistic regression did not match Enos' original results. This may be because I chose the wrong variables to test in my models. It could also be due to the way I recoded the poll responses. It is very possible that logistic regression may not be the best way to analyze the provided data. Either way, with the exception on the question concerning the number of immigrants, the treatment does not appear to have had a large effect on polling preferences.
+
+Great notes for replicated tables. Overall, excellent comments throughout original Enos code.
 
 ## References
